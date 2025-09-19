@@ -1,0 +1,20 @@
+jenkins:
+  systemMessage: "AI Quality Gate Demo – Jenkins in Docker"
+  numExecutors: 2
+  mode: NORMAL
+  remotingSecurity:
+    enabled: true
+
+unclassified:
+  location:
+    url: "http://localhost:8080/"
+
+credentials:
+  system:
+    domainCredentials:
+      - credentials:
+          - string:
+              scope: GLOBAL
+              id: "openai-api-key"
+              description: "OpenAI API Key for AI code review"
+              secret: "${OPENAI_API_KEY:-CHANGEME}"

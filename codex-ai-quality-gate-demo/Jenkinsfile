@@ -1,0 +1,32 @@
+pipeline {
+  agent any
+  environment {
+    OPENAI_API_KEY = credentials('openai-api-key')
+    MODEL = 'gpt-5-thinking'
+  }
+  stages {
+    stage('Checkout') { steps { checkout scm } }
+    stage('Build & Test') { steps { sh 'mvn -B -q -DskipTests=false test' } }
+    stage('AI Code Review') {
+      steps {
+        sh '''
+          node --version || true
+          npm --version || true
+          node scripts/ai-review.js --model "$MODEL"             --prompt-file prompts/java-code-review.json             --source-glob "src/main/java/**/*.java"             --out report/ai-review.json
+        '''
+      }
+    }
+  }
+  post {
+    always {
+      script {
+        def report = readJSON file: 'report/ai-review.json'
+        echo "AI Summary: ${report.summary?.explain}"
+        if (report.summary?.quality_gate_status == 'FAIL') {
+          error "Quality Gate failed: blockers or critical security bugs found."
+        }
+      }
+      archiveArtifacts artifacts: 'report/ai-review.json', onlyIfSuccessful: false
+    }
+  }
+}

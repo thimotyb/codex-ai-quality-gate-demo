@@ -1,0 +1,16 @@
+services:
+  jenkins:
+    build: .
+    container_name: jenkins-ai-quality-gate
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    environment:
+      OPENAI_API_KEY: "${OPENAI_API_KEY}"
+      TZ: "Europe/Rome"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+    restart: unless-stopped
+
+volumes:
+  jenkins_home:

@@ -1,0 +1,89 @@
+{
+  "task": "java_code_quality_review",
+  "scope": {
+    "intent": "Detect code smells and security bugs in Java source",
+    "rules_of_engagement": [
+      "Analyze only the given files",
+      "No style nitpicks unless they create maintainability or risk",
+      "Prefer official names: CWE, OWASP Top 10, CERT Java"
+    ],
+    "definitions": {
+      "severity": [
+        "BLOCKER",
+        "CRITICAL",
+        "MAJOR",
+        "MINOR",
+        "INFO"
+      ],
+      "types": [
+        "SECURITY_BUG",
+        "BUG",
+        "CODE_SMELL"
+      ]
+    },
+    "quality_gate": {
+      "fail_if": {
+        "SECURITY_BUG": [
+          "BLOCKER",
+          "CRITICAL"
+        ],
+        "BUG": [
+          "BLOCKER"
+        ],
+        "CODE_SMELL": [
+          "BLOCKER"
+        ],
+        "max_total_critical": 0
+      }
+    }
+  },
+  "inputs": {
+    "repo": "${REPO_NAME}",
+    "commit": "${GIT_COMMIT}",
+    "files": [],
+    "context": {
+      "build_system": "maven",
+      "java_version": "17"
+    }
+  },
+  "expected_output_schema": {
+    "summary": {
+      "totals": {
+        "SECURITY_BUG": "number",
+        "BUG": "number",
+        "CODE_SMELL": "number",
+        "by_severity": {
+          "BLOCKER": "number",
+          "CRITICAL": "number",
+          "MAJOR": "number",
+          "MINOR": "number",
+          "INFO": "number"
+        }
+      },
+      "quality_gate_status": "PASS|FAIL",
+      "explain": "string"
+    },
+    "findings": [
+      {
+        "type": "SECURITY_BUG|BUG|CODE_SMELL",
+        "title": "string",
+        "severity": "BLOCKER|CRITICAL|MAJOR|MINOR|INFO",
+        "cwe": "CWE-xxx (optional)",
+        "owasp": "Axx (optional)",
+        "file": "string",
+        "line_start": "number",
+        "line_end": "number",
+        "code_excerpt": "string",
+        "explanation": "string",
+        "risk": "string",
+        "fix_suggestion": "string",
+        "confidence": "HIGH|MEDIUM|LOW"
+      }
+    ]
+  },
+  "output_constraints": {
+    "format": "JSON",
+    "no_markdown": true,
+    "no_free_text_outside_json": true
+  }
+}
