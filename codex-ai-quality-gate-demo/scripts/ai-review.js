@@ -6,7 +6,7 @@ import minimist from 'minimist';
 import OpenAI from 'openai';
 
 const args = minimist(process.argv.slice(2));
-const model = args.model || process.env.MODEL || 'gpt-5-thinking';
+const model = args.model || process.env.MODEL || 'gpt-5';
 const promptFile = args['prompt-file'];
 const out = args.out || 'report/ai-review.json';
 const sourceGlob = args['source-glob'] || 'src/main/java/**/*.java';
@@ -36,7 +36,6 @@ const messages = [
 const resp = await client.chat.completions.create({
   model,
   messages,
-  temperature: 0,
   response_format: { type: 'json_object' }
 });
 

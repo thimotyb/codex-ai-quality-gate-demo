@@ -1,18 +1,52 @@
 pipeline {
   agent any
+  options { skipDefaultCheckout(true) } // niente checkout implicito
   environment {
     OPENAI_API_KEY = credentials('openai-api-key')
-    MODEL = 'gpt-5-thinking'
+    MODEL = 'gpt-5'
+    NODE_PATH = '/usr/local/lib/node_modules'
   }
   stages {
-    stage('Checkout') { steps { checkout scm } }
-    stage('Build & Test') { steps { sh 'mvn -B -q -DskipTests=false test' } }
+    stage('Sync Demo (no SCM)') {
+      steps {
+        sh '''
+          set -eux
+          # copia dal path dell'immagine nel workspace
+          if command -v rsync >/dev/null 2>&1; then
+            # proteggi il tuo package.json locale
+            rsync -a --delete --exclude 'scripts/package.json' /usr/share/demo/ "$WORKSPACE"/
+          else
+            # niente delete: copia soltanto, per non perdere i file locali
+            cp -a /usr/share/demo/. "$WORKSPACE"/
+          fi
+          cat scripts/package.json || true
+          ls -la
+          ls -la scripts || true
+        '''
+      }
+    }
+    stage('Build & Test') {
+      steps {
+        sh '''
+          set -eux
+          mvn -B -q -DskipTests=false test
+        '''
+      }
+    }
     stage('AI Code Review') {
       steps {
         sh '''
+          set -eux
+          mkdir -p report
           node --version || true
           npm --version || true
-          node scripts/ai-review.js --model "$MODEL"             --prompt-file prompts/java-code-review.json             --source-glob "src/main/java/**/*.java"             --out report/ai-review.json
+          # Installa dipendenze localmente nel workspace
+          npm i --no-audit --no-fund openai glob minimist
+          node scripts/ai-review.js --model "$MODEL" \
+            --prompt-file prompts/java-code-review.json \
+            --source-glob "src/main/java/**/*.java" \
+            --out report/ai-review.json
+          test -f report/ai-review.json && cat report/ai-review.json || true
         '''
       }
     }
@@ -20,8 +54,13 @@ pipeline {
   post {
     always {
       script {
-        def report = readJSON file: 'report/ai-review.json'
-        echo "AI Summary: ${report.summary?.explain}"
+        if (!fileExists('report/ai-review.json')) {
+          echo 'report/ai-review.json NON trovato (chiave API mancante? output non JSON? vedi log AI Code Review).'
+          error 'Manca report/ai-review.json.'
+        }
+        def txt = readFile('report/ai-review.json') 
+        def report = readJSON file: 'report/ai-review.json' 
+        echo "AI Summary: ${report.summary?.explain}" 
         if (report.summary?.quality_gate_status == 'FAIL') {
           error "Quality Gate failed: blockers or critical security bugs found."
         }
